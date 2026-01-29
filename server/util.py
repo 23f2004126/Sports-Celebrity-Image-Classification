@@ -68,4 +68,47 @@ def classify_image(image_base64_data, file_path=None):
         final = combined_img.reshape(1, -1).astype(float)
 
         result.append({
-            "class": __class_number_to_name[__model.p]()_
+            "class": __class_number_to_name[__model.predict(final)[0]],
+            "class_probability": np.around(__model.predict_proba(final) * 100, 2).tolist()[0],
+            "class_dictionary": __class_name_to_number
+        })
+
+    return result
+
+
+def get_cv2_image_from_base64_string(b64str):
+    encoded_data = b64str.split(",")[1]
+    nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
+    return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+
+def get_cropped_image_if_2_eyes(image_path, image_base64_data):
+    if image_path:
+        img = cv2.imread(image_path)
+    else:
+        img = get_cv2_image_from_base64_string(image_base64_data)
+
+    if img is None:
+        return []
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=4,
+        minSize=(60, 60)
+    )
+
+    cropped_faces = []
+    for (x, y, w, h) in faces:
+        roi_gray = gray[y:y+h, x:x+w]
+        roi_color = img[y:y+h, x:x+w]
+
+        eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 3)
+
+        # relaxed condition (more reliable)
+        if len(eyes) >= 1:
+            cropped_faces.append(roi_color)
+
+    return cropped_faces
