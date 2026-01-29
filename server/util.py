@@ -1,8 +1,12 @@
-# ===== sklearn backward-compat patch =====
+# ===== sklearn backward compatibility patches =====
 import sys
 import sklearn.preprocessing
+import sklearn.svm
+
+# old sklearn paths used when the model was trained
 sys.modules['sklearn.preprocessing.data'] = sklearn.preprocessing
-# ========================================
+sys.modules['sklearn.svm.classes'] = sklearn.svm
+# ================================================
 
 import joblib
 import json
@@ -12,13 +16,14 @@ import cv2
 from wavelet import w2d
 import os
 
+# ---------- PATHS ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
 
 CLASS_DICT_PATH = os.path.join(ARTIFACTS_DIR, "class_dictionary.json")
 MODEL_PATH = os.path.join(ARTIFACTS_DIR, "saved_model.pkl")
 
-# Use OpenCV built-in haarcascades (Render safe)
+# ---------- OPENCV CASCADES (Render safe) ----------
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
@@ -31,6 +36,7 @@ __class_number_to_name = {}
 __model = None
 
 
+# ---------- LOAD MODEL ----------
 def load_saved_artifacts():
     print("loading saved artifacts...start")
 
@@ -48,6 +54,7 @@ def load_saved_artifacts():
     print("loading saved artifacts...done")
 
 
+# ---------- CLASSIFICATION ----------
 def classify_image(image_base64_data, file_path=None):
     imgs = get_cropped_image_if_2_eyes(file_path, image_base64_data)
 
@@ -56,26 +63,29 @@ def classify_image(image_base64_data, file_path=None):
 
     result = []
     for img in imgs:
-        scalled_raw_img = cv2.resize(img, (32, 32))
-        img_har = w2d(img, 'db1', 5)
-        scalled_img_har = cv2.resize(img_har, (32, 32))
+        scaled_raw_img = cv2.resize(img, (32, 32))
+        img_har = w2d(img, "db1", 5)
+        scaled_img_har = cv2.resize(img_har, (32, 32))
 
         combined_img = np.vstack((
-            scalled_raw_img.reshape(32 * 32 * 3, 1),
-            scalled_img_har.reshape(32 * 32, 1)
+            scaled_raw_img.reshape(32 * 32 * 3, 1),
+            scaled_img_har.reshape(32 * 32, 1)
         ))
 
         final = combined_img.reshape(1, -1).astype(float)
 
         result.append({
             "class": __class_number_to_name[__model.predict(final)[0]],
-            "class_probability": np.around(__model.predict_proba(final) * 100, 2).tolist()[0],
+            "class_probability": np.around(
+                __model.predict_proba(final) * 100, 2
+            ).tolist()[0],
             "class_dictionary": __class_name_to_number
         })
 
     return result
 
 
+# ---------- IMAGE HELPERS ----------
 def get_cv2_image_from_base64_string(b64str):
     encoded_data = b64str.split(",")[1]
     nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
@@ -102,12 +112,12 @@ def get_cropped_image_if_2_eyes(image_path, image_base64_data):
 
     cropped_faces = []
     for (x, y, w, h) in faces:
-        roi_gray = gray[y:y+h, x:x+w]
-        roi_color = img[y:y+h, x:x+w]
+        roi_gray = gray[y:y + h, x:x + w]
+        roi_color = img[y:y + h, x:x + w]
 
         eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 3)
 
-        # relaxed condition (more reliable)
+        # relaxed eye condition
         if len(eyes) >= 1:
             cropped_faces.append(roi_color)
 
