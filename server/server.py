@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import util
 import os
 
@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Sports Celebrity Image Classification API is running"
+    return render_template("index.html")
 
 
 @app.route('/classify_image', methods=['POST'])
