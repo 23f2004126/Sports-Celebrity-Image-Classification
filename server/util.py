@@ -1,8 +1,12 @@
-
+# ================== CRITICAL PATCH (ISSUE 1 – FINAL) ==================
+# Fix old sklearn pickle paths (preprocessing + SVM)
 import sys
 import sklearn.preprocessing
+import sklearn.svm._classes
+
 sys.modules['sklearn.preprocessing.data'] = sklearn.preprocessing
-# ===============================================================
+sys.modules['sklearn.svm.classes'] = sklearn.svm._classes
+# =====================================================================
 
 import joblib
 import json
@@ -95,7 +99,7 @@ def get_cropped_image_if_2_eyes(image_path, image_base64_data):
     else:
         img = get_cv2_image_from_base64_string(image_base64_data)
 
-    # SAFETY CHECK (prevents crashes)
+    # SAFETY CHECK
     if img is None:
         return []
 
