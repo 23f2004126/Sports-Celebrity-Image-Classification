@@ -1,5 +1,0 @@
-flask
-numpy
-scikit-learn
-PyWavelets
-opencv-python-headless
