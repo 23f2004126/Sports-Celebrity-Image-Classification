@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import util
 import os
 
+# Tell Flask where UI lives (DO NOT MOVE UI FOLDER)
 app = Flask(
     __name__,
     template_folder="../UI",
@@ -11,7 +12,8 @@ app = Flask(
 
 @app.route('/')
 def home():
-    return render_template("index.html")
+    # Serve UI
+    return render_template("app.html")
 
 
 @app.route('/classify_image', methods=['POST'])
@@ -28,5 +30,6 @@ if __name__ == "__main__":
     print("Starting Python Flask Server For Sports Celebrity Image Classification")
     util.load_saved_artifacts()
 
+    # REQUIRED for Render
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
