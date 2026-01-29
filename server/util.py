@@ -1,3 +1,9 @@
+
+import sys
+import sklearn.preprocessing
+sys.modules['sklearn.preprocessing.data'] = sklearn.preprocessing
+# ===============================================================
+
 import joblib
 import json
 import numpy as np
@@ -10,15 +16,20 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
-OPENCV_DIR = os.path.join(BASE_DIR, "opencv", "haarcascades")
 
 CLASS_DICT_PATH = os.path.join(ARTIFACTS_DIR, "class_dictionary.json")
 MODEL_PATH = os.path.join(ARTIFACTS_DIR, "saved_model.pkl")
-
-FACE_CASCADE_PATH = os.path.join(OPENCV_DIR, "haarcascade_frontalface_default.xml")
-EYE_CASCADE_PATH = os.path.join(OPENCV_DIR, "haarcascade_eye.xml")
-
 # ------------------------------------------------
+
+# ---------------- OPENCV CASCADES (ISSUE 2 FIX) ----------------
+# Use OpenCV's built-in haarcascade path (works locally + Render)
+face_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+eye_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_eye.xml"
+)
+# ---------------------------------------------------------------
 
 __class_name_to_number = {}
 __class_number_to_name = {}
@@ -79,13 +90,14 @@ def get_cv2_image_from_base64_string(b64str):
 
 
 def get_cropped_image_if_2_eyes(image_path, image_base64_data):
-    face_cascade = cv2.CascadeClassifier(FACE_CASCADE_PATH)
-    eye_cascade = cv2.CascadeClassifier(EYE_CASCADE_PATH)
-
     if image_path:
         img = cv2.imread(image_path)
     else:
         img = get_cv2_image_from_base64_string(image_base64_data)
+
+    # SAFETY CHECK (prevents crashes)
+    if img is None:
+        return []
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
