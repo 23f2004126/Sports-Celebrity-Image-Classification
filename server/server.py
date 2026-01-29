@@ -2,7 +2,11 @@ from flask import Flask, request, jsonify, render_template
 import util
 import os
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder="../UI",
+    static_folder="../UI"
+)
 
 
 @app.route('/')
