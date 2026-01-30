@@ -27,9 +27,6 @@ MODEL_PATH = os.path.join(ARTIFACTS_DIR, "saved_model.pkl")
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
-eye_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_eye.xml"
-)
 
 __class_name_to_number = {}
 __class_number_to_name = {}
@@ -51,12 +48,20 @@ def load_saved_artifacts():
     if __model is None:
         __model = joblib.load(MODEL_PATH)
 
+        # 🔧 PATCH: fix old SVC model incompatibility
+        try:
+            svc = __model.steps[-1][1]  # last step in Pipeline
+            if not hasattr(svc, "break_ties"):
+                svc.break_ties = False
+        except Exception:
+            pass
+
     print("loading saved artifacts...done")
 
 
 # ---------- CLASSIFICATION ----------
 def classify_image(image_base64_data, file_path=None):
-    imgs = get_cropped_image_if_2_eyes(file_path, image_base64_data)
+    imgs = get_cropped_image(file_path, image_base64_data)
 
     if len(imgs) == 0:
         return []
@@ -74,11 +79,12 @@ def classify_image(image_base64_data, file_path=None):
 
         final = combined_img.reshape(1, -1).astype(float)
 
+        prediction = __model.predict(final)[0]
+        probabilities = __model.predict_proba(final)[0]
+
         result.append({
-            "class": __class_number_to_name[__model.predict(final)[0]],
-            "class_probability": np.around(
-                __model.predict_proba(final) * 100, 2
-            ).tolist()[0],
+            "class": __class_number_to_name[prediction],
+            "class_probability": np.around(probabilities * 100, 2).tolist(),
             "class_dictionary": __class_name_to_number
         })
 
@@ -92,7 +98,7 @@ def get_cv2_image_from_base64_string(b64str):
     return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
 
-def get_cropped_image_if_2_eyes(image_path, image_base64_data):
+def get_cropped_image(image_path, image_base64_data):
     if image_path:
         img = cv2.imread(image_path)
     else:
@@ -112,13 +118,7 @@ def get_cropped_image_if_2_eyes(image_path, image_base64_data):
 
     cropped_faces = []
     for (x, y, w, h) in faces:
-        roi_gray = gray[y:y + h, x:x + w]
         roi_color = img[y:y + h, x:x + w]
-
-        eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 3)
-
-        # relaxed eye condition
-        if len(eyes) >= 1:
-            cropped_faces.append(roi_color)
+        cropped_faces.append(roi_color)
 
     return cropped_faces
