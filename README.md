@@ -8,7 +8,6 @@ A **Machine Learning image classification project** that identifies sports celeb
 
 ![Sports Celebrity Classification Web App](ui_snapshot.jpg)
 
-> Add the website screenshot inside a `screenshots/` folder.
 
 ---
 
